@@ -7,6 +7,6 @@ namespace GrafanaJsonWebApiCardanoPool.Models.Grafana
         [JsonProperty("target")]
         public string Target { get; set; }
         [JsonProperty("datapoints")]
-        public List<string> DataPoints { get; set; }
+        public List<List<Object>> DataPoints { get; set; }
     }
 }

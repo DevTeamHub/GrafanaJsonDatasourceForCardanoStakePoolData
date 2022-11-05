@@ -6,7 +6,7 @@ using GrafanaJsonWebApiCardanoPool.Services.Interfaces;
 using GrafanaJsonWebApiCardanoPool.Settings;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using System.ComponentModel;
+using GrafanaJsonWebApiCardanoPool.Attributes;
 
 namespace GrafanaJsonWebApiCardanoPool.Services.Implementations
 {
@@ -41,14 +41,15 @@ namespace GrafanaJsonWebApiCardanoPool.Services.Implementations
             if (metricPropertyName != null)
             {
 
-                var metricValue = data.GetType().GetProperty(metricPropertyName)
-                    .GetValue(data, null);
+                var metricValueProperty = data.GetType().GetProperty(metricPropertyName);
 
-                return new List<MetricQueryModel> { new MetricQueryModel(metricValue.ToString(), metricPropertyName) };
+                return new List<MetricQueryModel> { new MetricQueryModel(
+                    metricValueProperty.GetValue(data, null),
+                    metricValueProperty.GetCustomAttribute<MetricNameAttribute>().MetricName) };
             }
 
             return data.GetType().GetProperties().Select(x =>
-                new MetricQueryModel(x.GetValue(data, null).ToString(), x.GetCustomAttribute<DescriptionAttribute>().Description)).ToList();
+                new MetricQueryModel(x.GetValue(data, null), x.GetCustomAttribute<MetricNameAttribute>().MetricName)).ToList();
 
         }
 
@@ -59,8 +60,8 @@ namespace GrafanaJsonWebApiCardanoPool.Services.Implementations
             var metrics = new List<MetricModel>();
             foreach (var propertyInfo in typeof(DataSourceModel).GetProperties())
             {
-                var propertyDesc = propertyInfo.GetCustomAttribute<DescriptionAttribute>().Description;
-                metrics.Add(new MetricModel(propertyDesc, propertyInfo.Name));
+                var metricName = propertyInfo.GetCustomAttribute<MetricNameAttribute>().MetricName;
+                metrics.Add(new MetricModel(metricName, propertyInfo.Name));
             }
 
             return await Task.FromResult(metrics);

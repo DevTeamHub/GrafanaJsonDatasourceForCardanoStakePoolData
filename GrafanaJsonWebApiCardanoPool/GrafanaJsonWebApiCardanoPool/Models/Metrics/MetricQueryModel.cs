@@ -2,13 +2,13 @@
 {
     public class MetricQueryModel
     {
-        public MetricQueryModel(string value, string target)
+        public MetricQueryModel(object? value, string target)
         {
             Value = value;
             Target = target;
         }
 
         public string Target { get; set; }
-        public string Value { get; set; }
+        public object? Value { get; set; }
     }
 }

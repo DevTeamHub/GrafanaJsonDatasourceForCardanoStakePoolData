@@ -2,6 +2,7 @@ using GrafanaJsonWebApiCardanoPool.Models.Grafana;
 using GrafanaJsonWebApiCardanoPool.Models.Metrics;
 using GrafanaJsonWebApiCardanoPool.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
 
 namespace GrafanaJsonWebApiCardanoPool.Controllers
 {
@@ -30,16 +31,19 @@ namespace GrafanaJsonWebApiCardanoPool.Controllers
         /// <param name="query"></param>
         /// <returns></returns>
         [HttpPost("query")]
-        public async Task<List<QueryResponseItem>> Query([FromBody] QueryRequest query)
+        public async Task<IActionResult> Query([FromBody] QueryRequest query)
         {
             var metricPropertyName = query.Targets.FirstOrDefault()?.Target;
             var metricItems = await _poolDataService.QueryMetrics(metricPropertyName);
 
-            return new List<QueryResponseItem>(metricItems.Select(x => new QueryResponseItem
+            var result = new List<QueryResponseItem>(metricItems.Select(x => new QueryResponseItem
             {
                 Target = x.Target,
-                DataPoints = new List<string> { x.Value }
+                DataPoints = new List<List<Object>> { new List<object> { x.Value, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() } } 
             }));
+
+            var jsonResult = JsonConvert.SerializeObject(result);
+            return Ok($"{jsonResult}");
         }
 
         /// <summary>
