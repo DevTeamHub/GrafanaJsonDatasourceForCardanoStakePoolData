@@ -9,4 +9,4 @@ GET / with 200 status code response. Used for "Test connection" on the datasourc
 POST /search to return available metrics. <br/>
 POST /query to return panel data or annotations.
 
-The data for Cardano Pool Metrics is used from https://cexplorer.io/ web site: [https://js.cexplorer.io/api-static/pool/<Stake Pool Id>.json](https://js.cexplorer.io/api-static/pool/pool1w4xhfnhuenzgqqzuldnzrcm4kgpsjv8l0re3p574vg5lv4er0k7.json "Stake Pool Data Source")
+The data for Cardano Pool Metrics is used from https://cexplorer.io/ web site: [https://js.cexplorer.io/api-static/pool/**Stake Pool Id**.json](https://js.cexplorer.io/api-static/pool/pool1w4xhfnhuenzgqqzuldnzrcm4kgpsjv8l0re3p574vg5lv4er0k7.json "Stake Pool Data Source")
