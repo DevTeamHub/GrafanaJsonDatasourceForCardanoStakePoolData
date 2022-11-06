@@ -7,6 +7,7 @@ using GrafanaJsonWebApiCardanoPool.Settings;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using GrafanaJsonWebApiCardanoPool.Attributes;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GrafanaJsonWebApiCardanoPool.Services.Implementations
 {
@@ -15,41 +16,57 @@ namespace GrafanaJsonWebApiCardanoPool.Services.Implementations
         private readonly ILogger<PoolDataController> _logger;
         private readonly IOptions<AppSettings> _appSettings;
         private readonly HttpClient _httpClient;
+        private readonly IMemoryCache _memoryCache;
+        private readonly string PoolDataCasheKey = "PoolData";
+        private readonly int CacheHours = 6;
+
         public PoolDataService(
             ILogger<PoolDataController> logger,
             IOptions<AppSettings> appSettings,
-            HttpClient httpClient)
+            HttpClient httpClient,
+            IMemoryCache memoryCache)
         {
             _logger = logger;
             _appSettings = appSettings;
             _httpClient = httpClient;
+            _memoryCache = memoryCache;
         }
 
         public async Task<List<MetricQueryModel>> QueryMetrics(string? metricPropertyName)
         {
-            var request = new HttpRequestMessage
-            {
-                RequestUri = new Uri(_appSettings.Value.DataSourceUrl),
-                Method = HttpMethod.Get
-            };
-            var response = await _httpClient.SendAsync(request);
-            var body = await response.Content.ReadAsStringAsync();
-            var responseContent = JsonConvert.DeserializeObject<DataSourceResponse>(body);
+            _logger.LogInformation($"The request for metrics: {metricPropertyName}");
 
-            var data = responseContent.Data;
+            if(!_memoryCache.TryGetValue(PoolDataCasheKey, out DataSourceModel poolData))
+            {
+                var request = new HttpRequestMessage
+                {
+                    RequestUri = new Uri(_appSettings.Value.DataSourceUrl),
+                    Method = HttpMethod.Get
+                };
+                var response = await _httpClient.SendAsync(request);
+                var body = await response.Content.ReadAsStringAsync();
+                var responseContent = JsonConvert.DeserializeObject<DataSourceResponse>(body);
+
+                poolData = responseContent.Data;
+
+                var cacheEntryOptions = new MemoryCacheEntryOptions()
+                    .SetSlidingExpiration(TimeSpan.FromHours(CacheHours));
+
+                _memoryCache.Set(PoolDataCasheKey, poolData, cacheEntryOptions);
+            }
 
             if (metricPropertyName != null)
             {
 
-                var metricValueProperty = data.GetType().GetProperty(metricPropertyName);
+                var metricValueProperty = poolData.GetType().GetProperty(metricPropertyName);
 
                 return new List<MetricQueryModel> { new MetricQueryModel(
-                    metricValueProperty.GetValue(data, null),
+                    metricValueProperty.GetValue(poolData, null),
                     metricValueProperty.GetCustomAttribute<MetricNameAttribute>().MetricName) };
             }
 
-            return data.GetType().GetProperties().Select(x =>
-                new MetricQueryModel(x.GetValue(data, null), x.GetCustomAttribute<MetricNameAttribute>().MetricName)).ToList();
+            return poolData.GetType().GetProperties().Select(x =>
+                new MetricQueryModel(x.GetValue(poolData, null), x.GetCustomAttribute<MetricNameAttribute>().MetricName)).ToList();
 
         }
 
