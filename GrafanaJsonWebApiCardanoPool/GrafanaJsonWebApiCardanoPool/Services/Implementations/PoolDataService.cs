@@ -17,8 +17,7 @@ namespace GrafanaJsonWebApiCardanoPool.Services.Implementations
         private readonly IOptions<AppSettings> _appSettings;
         private readonly HttpClient _httpClient;
         private readonly IMemoryCache _memoryCache;
-        private readonly string PoolDataCasheKey = "PoolData";
-        private readonly int CacheHours = 6;
+        private const string PoolDataCacheKey = "PoolData";
 
         public PoolDataService(
             ILogger<PoolDataController> logger,
@@ -36,7 +35,7 @@ namespace GrafanaJsonWebApiCardanoPool.Services.Implementations
         {
             _logger.LogInformation($"The request for metrics: {metricPropertyName}");
 
-            if(!_memoryCache.TryGetValue(PoolDataCasheKey, out DataSourceModel poolData))
+            if(!_memoryCache.TryGetValue(PoolDataCacheKey, out DataSourceModel poolData))
             {
                 var request = new HttpRequestMessage
                 {
@@ -50,9 +49,9 @@ namespace GrafanaJsonWebApiCardanoPool.Services.Implementations
                 poolData = responseContent.Data;
 
                 var cacheEntryOptions = new MemoryCacheEntryOptions()
-                    .SetSlidingExpiration(TimeSpan.FromHours(CacheHours));
+                    .SetSlidingExpiration(TimeSpan.FromMinutes(_appSettings.Value.PoolDataCachePeriod));
 
-                _memoryCache.Set(PoolDataCasheKey, poolData, cacheEntryOptions);
+                _memoryCache.Set(PoolDataCacheKey, poolData, cacheEntryOptions);
             }
 
             if (metricPropertyName != null)
